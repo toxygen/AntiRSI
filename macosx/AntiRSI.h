@@ -47,6 +47,7 @@
     bool lock_focus;
     bool draw_dock_image;
     bool draw_dock_image_q;
+	bool specific_time;
 
     // various colors
     NSColor* taking;
@@ -99,6 +100,14 @@
 
 // time to next break string
 - (void)drawNextBreak:(int)seconds;
+
+// toggle specific time
+- (IBAction)setSpecificTime:(id)sender;
+
+@property (assign) IBOutlet NSTextField *intervalLabel;
+@property (assign) IBOutlet NSSlider *intervalSlider;
+@property (assign) IBOutlet NSWindow *Preferences_Windows;
+@property (assign) IBOutlet NSTextField *Period_Number;
 
 @end
 

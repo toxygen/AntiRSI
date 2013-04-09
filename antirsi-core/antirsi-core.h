@@ -14,19 +14,21 @@
 #include <time.h>
 #include <sys/time.h>
 
+#define ENABLED 1
+
 /** the state antirsi is in */
 typedef enum {
-  S_NORMAL = 1,
-  S_IN_MINI,
-  S_IN_WORK
+	S_NORMAL = 1,
+	S_IN_MINI,
+	S_IN_WORK
 } ai_state;
 
 /** a global context for the core */
 typedef struct _ai_core {
     void * user_data;
-
+	
     double time;
-
+	
     // breaks
     /** time since last mini break */
     double mini_t;
@@ -36,13 +38,13 @@ typedef struct _ai_core {
     double work_t;
     /** time the user has been taking a work break */
     double work_taking_t;
-
+	
     // natural break continuation
     /** last #work_taking_t, for natural break continuation */
     double last_work_taking_t;
     /** time when last natural work break was stopped */
     double last_work_taking_t_countdown;
-
+	
     // settings
     /** the time between mini breaks */
     int mini_interval;
@@ -54,16 +56,20 @@ typedef struct _ai_core {
     int work_duration;
     /** the time postpone will set #work_t back */
     int postpone_time;
-
+	
     /** 1 if no mini breaks are to be issues, 0 otherwise */
     int mini_disabled;
     /** 1 if no work breaks are to be issues, 0 otherwise */
     int work_disabled;
-
+	
+	/* time synchronization flag */
+	int time_sync;
+	int minute;
+	
     // state
     ai_state state;
     double ith[4]; // history filter
-
+	
     // library exit functions
     /**
      * when a break is over, this function is called
@@ -80,7 +86,7 @@ typedef struct _ai_core {
     void (*emit_break_update)(void * data);
     /** everytime a tick has been processed, this function is called; see #emit_break_end */
     void (*emit_status_update)(void * data);
-
+	
 } ai_core;
 
 /** returns the seconds until the next work break */
@@ -94,11 +100,15 @@ void ai_work_break_postpone(ai_core *c);
 /** will initiate a work break right now */
 void ai_work_break_now(ai_core *c);
 
+/* natural work flag */
+int natural_work;
+
 // natural break continuation
 /** 1 if a natural work break continuation is available, 0 otherwise */
 int ai_can_continue_natural_break(ai_core *c);
 /** continue a natural work break, use this instead of #ai_work_break_now */
 void ai_continue_natural_work_break(ai_core *c);
+
 
 /**
  * makes the core go one step, calculating times spend, idle time and then the new state/times

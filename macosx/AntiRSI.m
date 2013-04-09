@@ -43,12 +43,17 @@ static void handle_status_update(void * data) {
 }
 
 @implementation AntiRSI
+@synthesize intervalLabel;
+@synthesize intervalSlider;
+@synthesize Preferences_Windows;
+@synthesize Period_Number;
 
 // bindings methods
 - (void)setMicro_pause_duration:(float)f { core->mini_duration = round(f); }
 - (void)setMicro_pause_period:(float)f   { core->mini_interval = 60 * round(f); }
 - (void)setWork_break_duration:(float)f  { core->work_duration = 60 * round(f); }
-- (void)setWork_break_period:(float)f    { core->work_interval = 60 * round(f); }
+- (void)setWork_break_period:(float)f    { core->work_interval = 60 * round(f); core->minute = (int)f; printf("setting %d\n", core->minute); }
+
 
 - (float)micro_pause_duration { return core->mini_duration; }
 - (float)micro_pause_period   { return core->mini_interval; }
@@ -94,7 +99,7 @@ static void handle_status_update(void * data) {
     background=[c retain];
 
     // make new darkbackground color
-    float r,g,b,a;
+    CGFloat r,g,b,a;
     [background getRed:&r green:&g blue:&b alpha:&a];
     [darkbackground autorelease];
     darkbackground=[[NSColor colorWithCalibratedRed:r*0.35 green:g*0.35 blue:b*0.35 alpha:a+0.2] retain];
@@ -117,6 +122,8 @@ static void handle_status_update(void * data) {
 }
 
 // end of bindings
+
+NSMutableDictionary* initial;
 
 - (void)awakeFromNib
 {
@@ -167,7 +174,7 @@ static void handle_status_update(void * data) {
     [self setBackground:background];
 
     // create initial values
-    NSMutableDictionary* initial = [NSMutableDictionary dictionaryWithCapacity:10];
+    initial = [NSMutableDictionary dictionaryWithCapacity:11];
     [initial setObject:[NSNumber numberWithFloat:4] forKey:@"micro_pause_period"];
     [initial setObject:[NSNumber numberWithFloat:13] forKey:@"micro_pause_duration"];
     [initial setObject:[NSNumber numberWithFloat:50] forKey:@"work_break_period"];
@@ -175,6 +182,7 @@ static void handle_status_update(void * data) {
     [initial setObject:@"Smooth" forKey:@"sample_interval"];
     [initial setObject:[NSNumber numberWithBool:YES] forKey:@"draw_dock_image"];
     [initial setObject:[NSNumber numberWithBool:NO] forKey:@"lock_focus"];
+	[initial setObject:[NSNumber numberWithBool:NO] forKey:@"specific_time"];
     [initial setObject:[NSArchiver archivedDataWithRootObject:elapsed] forKey:@"elapsed"];
     [initial setObject:[NSArchiver archivedDataWithRootObject:taking] forKey:@"taking"];
     [initial setObject:[NSArchiver archivedDataWithRootObject:background] forKey:@"background"];
@@ -193,6 +201,7 @@ static void handle_status_update(void * data) {
     [self bind:@"elapsed" toObject:dc withKeyPath:@"values.elapsed" options:unarchive];
     [self bind:@"taking" toObject:dc withKeyPath:@"values.taking" options:unarchive];
     [self bind:@"background" toObject:dc withKeyPath:@"values.background" options:unarchive];
+	[self bind:@"specific_time" toObject:dc withKeyPath:@"values.specific_time" options:nil];
 
     // alert every binding
     [[NSUserDefaultsController sharedUserDefaultsController] revert:self];
@@ -360,6 +369,37 @@ static void handle_status_update(void * data) {
     }
 }
 
+- (IBAction)setSpecificTime:(id)sender 
+{
+	if (![sender isKindOfClass:[NSButton class]])
+	{
+		return;
+	}
+	specific_time = ([(NSButton *)sender state] == NSOnState);
+	if (specific_time)
+	{
+		[intervalLabel setStringValue:@"Minute in Hour"];
+		if ([intervalSlider doubleValue] > 60.0)
+		{
+			[self setWork_break_period:60.0];
+			[Period_Number setDoubleValue:60.0];
+		}
+		[intervalSlider setMinValue:0.0];
+		[intervalSlider setMaxValue:60.0];
+		 
+		core->minute = [intervalSlider intValue];
+	}
+	else
+	{
+		[intervalLabel setStringValue:@"Time Between Breaks"];
+		[intervalSlider setMaxValue:120.0];
+		[intervalSlider setMinValue:20.0];
+	}
+	
+	core->time_sync = specific_time;
+
+}
+
 // goto website
 - (IBAction)gotoWebsite:(id)sender
 {
@@ -369,7 +409,9 @@ static void handle_status_update(void * data) {
 // check for update
 - (IBAction)checkForUpdate:(id)sender
 {
-    NSString *latest_version = [NSString stringWithContentsOfURL: [NSURL URLWithString:sLatestVersionURL]];
+	NSError *stringError = nil;
+    NSString *latest_version = [NSString stringWithContentsOfURL: [NSURL URLWithString:sLatestVersionURL] encoding:NSUTF8StringEncoding error:&stringError];
+	
     if (latest_version == Nil) latest_version = @"";
     
     latest_version = [latest_version stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
