@@ -101,7 +101,7 @@ void ai_work_break_postpone(ai_core *c);
 void ai_work_break_now(ai_core *c);
 
 /* natural work flag */
-int natural_work;
+//int natural_work;
 
 // natural break continuation
 /** 1 if a natural work break continuation is available, 0 otherwise */
